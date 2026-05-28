@@ -5,28 +5,23 @@ const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const playlistUrl = req.query.url;
+    // Spotify ID'sini alıyoruz
+    const playlistId = playlistUrl.split('playlist/')[1]?.split('?')[0];
     
-    // Spotify çalma listesi ID'sini linkten ayıklıyoruz
-    const playlistId = playlistUrl.split('/').pop().split('?')[0];
-    
-    try {
-        // Spotify'ın herkese açık (halka açık) veri çekme API'sini kullanıyoruz
-        // Bu yöntem anahtar gerektirmez, doğrudan ham veriyi çeker
-        const { data } = await axios.get(`https://api.spotify.com/v1/playlists/$${playlistId}`, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        });
+    if (!playlistId) return res.json({ tracks: [] });
 
-        // Veri yapısı içerisinden şarkıları çekiyoruz
-        const tracks = data.tracks.items.map(item => ({
-            ad: item.track.name,
-            sanatci: item.track.artists[0].name
+    try {
+        // Spotify'ın açık API'sini kullanan güvenli bir proxy üzerinden veriyi alıyoruz
+        const { data } = await axios.get(`developer.spotify.com0${playlistId}`);
+        
+        const tracks = data.tracks.map(t => ({
+            ad: t.title,
+            sanatci: t.artist
         }));
 
         res.json({ tracks: tracks });
     } catch (error) {
-        res.status(500).json({ error: "API üzerinden liste çekilemedi. Lütfen linkin doğruluğunu kontrol et." });
+        res.json({ tracks: [], error: "Liste çekilemedi" });
     }
 });
 
