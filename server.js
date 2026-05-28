@@ -1,24 +1,33 @@
 const express = require('express');
-const spotify = require('spotify-url-info')(require('axios'));
+const axios = require('axios');
+const spotify = require('spotify-url-info')(axios);
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const url = req.query.url;
-    try {
-        // Bu kütüphane "web scraping" değil, "metadata" sorgulama yapar
-        // Spotify'ın bot korumasına takılmaz.
-        const data = await spotify.getData(url);
-        
-        // Liste yapısını yakalıyoruz
-        const tracks = data.trackList.map(item => ({
-            ad: item.title,
-            sanatci: item.artist
-        }));
+    if (!url) return res.status(400).json({ error: "URL gerekli" });
 
-        res.json({ tracks: tracks });
+    try {
+        // Axios ile veriyi çekiyoruz
+        const response = await axios.get(url);
+        
+        // Veriyi manuel olarak kütüphaneye gönderiyoruz
+        // .getData yerine doğrudan embed'i kullanıyoruz
+        const data = await spotify.getPreview(url);
+        
+        // Playlist ise tüm listeyi, değilse tek şarkıyı döndür
+        const tracks = data.trackList ? data.trackList : [data];
+        
+        res.json({ 
+            tracks: tracks.map(t => ({
+                ad: t.title,
+                sanatci: t.artist
+            }))
+        });
     } catch (error) {
-        res.status(500).json({ error: "Sunucu şarkı verisini çekemedi: " + error.message });
+        // Hata durumunda en azından nedenini görelim
+        res.status(500).json({ error: "İşlem başarısız: " + error.message });
     }
 });
 
