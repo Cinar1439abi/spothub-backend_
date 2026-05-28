@@ -7,15 +7,27 @@ app.get('/api/playlist', async (req, res) => {
     const url = req.query.url;
     
     try {
-        // Spotify'ın botları engellemesini aşmak için en yalın istek
         const response = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1'
-            }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
         });
+
+        // Şarkı adlarını ve sanatçıları yakalamak için daha hassas bir yöntem
+        const regex = /"trackName":"(.*?)"/g;
+        const artistRegex = /"artistName":"(.*?)"/g;
         
-        // Veriyi ham olarak döndürerek sunucu taraflı filtreleme hatasını yok ediyoruz
-        res.json({ status: "success", data_received: true, length: response.data.length });
+        let tracks = [];
+        let match;
+        
+        // Şarkı ve sanatçı eşleşmelerini diziye al
+        while ((match = regex.exec(response.data)) !== null) {
+            let artistMatch = artistRegex.exec(response.data);
+            tracks.push({
+                ad: match[1],
+                sanatci: artistMatch ? artistMatch[1] : "Sanatçı Bilinmiyor"
+            });
+        }
+
+        res.json({ tracks: tracks });
     } catch (error) {
         res.json({ status: "error", message: error.message });
     }
