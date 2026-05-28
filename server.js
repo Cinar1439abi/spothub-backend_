@@ -1,28 +1,26 @@
 const express = require('express');
-const axios = require('axios');
 const app = express();
+const spotify = require('spotify-url-info')(require('axios')); // Bu kütüphane en sağlamıdır
+
 const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
-    const playlistUrl = req.query.url;
-    // Çalma listesi ID'sini al
-    const id = playlistUrl.split('playlist/')[1]?.split('?')[0];
-
-    if (!id) return res.json({ error: "Geçersiz link" });
+    const url = req.query.url;
+    if (!url) return res.status(400).json({ error: "URL gerekli" });
 
     try {
-        // En garanti ve ücretsiz API servisi üzerinden veriyi çekiyoruz
-        const response = await axios.get(`developer.spotify.com1${id}`);
+        // Spotify linkini çözümle ve veriyi çek
+        const data = await spotify.getData(url);
         
-        // Gelen veriyi uygulamana uygun formata çeviriyoruz
-        const tracks = response.data.map(t => ({
+        // Şarkı listesini temizle ve gönder
+        const tracks = data.trackList.map(t => ({
             ad: t.title,
             sanatci: t.artist
         }));
 
         res.json({ tracks: tracks });
-    } catch (e) {
-        res.json({ tracks: [], error: "Sunucu bağlantı hatası" });
+    } catch (error) {
+        res.status(500).json({ error: "Spotify bağlantısı reddedildi, IP bloklanmış olabilir." });
     }
 });
 
