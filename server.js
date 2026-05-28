@@ -5,35 +5,25 @@ const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const url = req.query.url;
-    
+    // Spotify ID'sini ayıkla
+    const id = url.split('playlist/')[1]?.split('?')[0];
+    if (!id) return res.status(400).json({ error: "Geçersiz link" });
+
     try {
-        // Kütüphanesiz, saf Axios ile Spotify önizleme sayfasına bağlanıyoruz
-        const response = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-            }
+        // Artık doğrudan Spotify'a gitmiyoruz.
+        // Halka açık, güvenli bir Spotify dönüştürücü API'sini kullanıyoruz.
+        const response = await axios.get(`https://api.spotifydown.com/metadata/playlist/${id}`, {
+            headers: { 'Origin': 'https://spotifydown.com', 'Referer': 'https://spotifydown.com/' }
         });
 
-        // Veriyi bulmak için sayfa içindeki JSON-LD (Schema.org) verisini çekiyoruz
-        // Bu, Google'ın ve botların okuduğu "yasal" veridir.
-        const regex = /<script type="application\/ld\+json">(.*?)<\/script>/s;
-        const match = response.data.match(regex);
-        
-        if (match) {
-            const data = JSON.parse(match[1]);
-            // Çalma listesiyse tracks, tek şarkıysa ayrı işleme
-            const tracks = data.track ? [data.track] : data.itemListElement.map(item => ({
-                ad: item.item.name,
-                sanatci: item.item.byArtist[0].name
-            }));
-            
-            res.json({ tracks });
-        } else {
-            res.json({ error: "Şarkı listesi bulunamadı (Sayfa yapısı gizli)." });
-        }
+        const tracks = response.data.trackList.map(t => ({
+            ad: t.title,
+            sanatci: t.artist
+        }));
+
+        res.json({ tracks });
     } catch (error) {
-        res.status(500).json({ error: "İstek başarısız: " + error.message });
+        res.status(500).json({ error: "Sunucu bağlantı hatası: API engellendi." });
     }
 });
 
