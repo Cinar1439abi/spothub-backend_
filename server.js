@@ -5,19 +5,23 @@ const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const playlistUrl = req.query.url;
-    
-    // Şarkıları çekmek için çok basit bir fetch yöntemi
     try {
-        const { data } = await axios.get(playlistUrl);
-        // Sayfa içeriğinden şarkı isimlerini basit bir regex ile ayıklıyoruz
-        const titleMatch = data.match(/<title>(.*?)<\/title>/);
-        res.json({ 
-            status: "Sunucu Başarılı", 
-            mesaj: "Sunucu aktif!",
-            liste_adi: titleMatch ? titleMatch[1] : "Bilinmeyen Liste"
+        const { data } = await axios.get(playlistUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
         });
+        
+        // Şarkı isimlerini sayfa kaynağından yakalayan basit mantık
+        const trackMatches = data.match(/"trackName":"(.*?)"/g) || [];
+        const artistMatches = data.match(/"artistName":"(.*?)"/g) || [];
+        
+        const tracks = trackMatches.map((t, i) => ({
+            ad: t.replace(/"trackName":"/g, '').replace(/"/g, ''),
+            sanatci: artistMatches[i] ? artistMatches[i].replace(/"artistName":"/g, '').replace(/"/g, '') : "Sanatçı Bilinmiyor"
+        }));
+
+        res.json({ tracks: tracks });
     } catch (error) {
-        res.status(500).json({ error: "Sunucu bağlantı kuramadı, lütfen linki kontrol et." });
+        res.status(500).json({ error: "Listeyi okurken hata oluştu." });
     }
 });
 
