@@ -2,8 +2,11 @@
   "name": "spothub-backend",
   "version": "1.0.0",
   "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "express": "^4.21.0",
-    "axios": "^1.7.0",
+    "axios": "^1.7.0"
   }
 }
