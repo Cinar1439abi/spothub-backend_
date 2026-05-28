@@ -1,33 +1,39 @@
 const express = require('express');
 const axios = require('axios');
-const spotify = require('spotify-url-info')(axios);
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const url = req.query.url;
-    if (!url) return res.status(400).json({ error: "URL gerekli" });
-
+    
     try {
-        // Axios ile veriyi çekiyoruz
-        const response = await axios.get(url);
-        
-        // Veriyi manuel olarak kütüphaneye gönderiyoruz
-        // .getData yerine doğrudan embed'i kullanıyoruz
-        const data = await spotify.getPreview(url);
-        
-        // Playlist ise tüm listeyi, değilse tek şarkıyı döndür
-        const tracks = data.trackList ? data.trackList : [data];
-        
-        res.json({ 
-            tracks: tracks.map(t => ({
-                ad: t.title,
-                sanatci: t.artist
-            }))
+        // Kütüphanesiz, saf Axios ile Spotify önizleme sayfasına bağlanıyoruz
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            }
         });
+
+        // Veriyi bulmak için sayfa içindeki JSON-LD (Schema.org) verisini çekiyoruz
+        // Bu, Google'ın ve botların okuduğu "yasal" veridir.
+        const regex = /<script type="application\/ld\+json">(.*?)<\/script>/s;
+        const match = response.data.match(regex);
+        
+        if (match) {
+            const data = JSON.parse(match[1]);
+            // Çalma listesiyse tracks, tek şarkıysa ayrı işleme
+            const tracks = data.track ? [data.track] : data.itemListElement.map(item => ({
+                ad: item.item.name,
+                sanatci: item.item.byArtist[0].name
+            }));
+            
+            res.json({ tracks });
+        } else {
+            res.json({ error: "Şarkı listesi bulunamadı (Sayfa yapısı gizli)." });
+        }
     } catch (error) {
-        // Hata durumunda en azından nedenini görelim
-        res.status(500).json({ error: "İşlem başarısız: " + error.message });
+        res.status(500).json({ error: "İstek başarısız: " + error.message });
     }
 });
 
