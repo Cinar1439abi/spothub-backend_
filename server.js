@@ -5,13 +5,11 @@ const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const url = req.query.url;
-    // Spotify ID'sini ayıkla
     const id = url.split('playlist/')[1]?.split('?')[0];
+    
     if (!id) return res.status(400).json({ error: "Geçersiz link" });
 
     try {
-        // Artık doğrudan Spotify'a gitmiyoruz.
-        // Halka açık, güvenli bir Spotify dönüştürücü API'sini kullanıyoruz.
         const response = await axios.get(`https://api.spotifydown.com/metadata/playlist/${id}`, {
             headers: { 'Origin': 'https://spotifydown.com', 'Referer': 'https://spotifydown.com/' }
         });
@@ -23,7 +21,7 @@ app.get('/api/playlist', async (req, res) => {
 
         res.json({ tracks });
     } catch (error) {
-        res.status(500).json({ error: "Sunucu bağlantı hatası: API engellendi." });
+        res.status(500).json({ error: "API bağlantısı başarısız oldu." });
     }
 });
 
