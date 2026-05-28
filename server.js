@@ -5,23 +5,24 @@ const PORT = process.env.PORT || 10000;
 
 app.get('/api/playlist', async (req, res) => {
     const playlistUrl = req.query.url;
-    // Spotify ID'sini alıyoruz
-    const playlistId = playlistUrl.split('playlist/')[1]?.split('?')[0];
-    
-    if (!playlistId) return res.json({ tracks: [] });
+    // Çalma listesi ID'sini al
+    const id = playlistUrl.split('playlist/')[1]?.split('?')[0];
+
+    if (!id) return res.json({ error: "Geçersiz link" });
 
     try {
-        // Spotify'ın açık API'sini kullanan güvenli bir proxy üzerinden veriyi alıyoruz
-        const { data } = await axios.get(`developer.spotify.com0${playlistId}`);
+        // En garanti ve ücretsiz API servisi üzerinden veriyi çekiyoruz
+        const response = await axios.get(`developer.spotify.com1${id}`);
         
-        const tracks = data.tracks.map(t => ({
+        // Gelen veriyi uygulamana uygun formata çeviriyoruz
+        const tracks = response.data.map(t => ({
             ad: t.title,
             sanatci: t.artist
         }));
 
         res.json({ tracks: tracks });
-    } catch (error) {
-        res.json({ tracks: [], error: "Liste çekilemedi" });
+    } catch (e) {
+        res.json({ tracks: [], error: "Sunucu bağlantı hatası" });
     }
 });
 
